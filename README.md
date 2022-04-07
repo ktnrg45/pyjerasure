@@ -1,5 +1,24 @@
 # pyjerasure
-Python Wrapper for Jerasure
+Python Wrapper library for libjerasure
+
+Only basic encoding/decoding methods are implemented.
+
+## Usage
+```
+import random
+import pyjerasure
+
+k = 4
+m = 2
+w = 8
+size = 8
+
+data = random.randbytes((k + m) * size)
+
+matrix = pyjerasure.Matrix("rs_r6", k, m, w)
+data_with_coding = pyjerasure.encode(matrix, data, size)
+
+```
 
 
 # Original License
