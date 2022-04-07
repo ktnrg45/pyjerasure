@@ -61,9 +61,9 @@ cdef class Matrix():
         return self.ptr != NULL
 
 
-def __check_size(int size, int data_size):
-    if size % sizeof(long) != 0:
-        raise ValueError(f"Size must be divisible by {sizeof(long)}")
+def __check_size(int w, int size, int data_size):
+    if size % w != 0:
+        raise ValueError(f"Size must be divisible by {w}")
     if data_size % size != 0:
         raise ValueError(f"Data Size must be divisible by size")
 
@@ -101,7 +101,7 @@ cdef int allocate_block_ptrs(int k, int m, int size, array.array data, char **da
 def decode(matrix: Matrix, data: bytes, erasures, size: int, packetsize: int = 0):
     """Return original data."""
     __check_matrix(matrix, packetsize)
-    __check_size(size, len(data))
+    __check_size(matrix.w, size, len(data))
 
     cdef int *erasures_ptr = <int *> calloc(len(erasures) + 1, sizeof(int));
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
@@ -128,7 +128,7 @@ def encode(matrix: Matrix, data: bytes, size: int, packetsize: int = 0):
     """Return data with coding blocks concatenated."""
     __check_matrix(matrix, packetsize)
     data = data.ljust((matrix.k + matrix.m) * size, b"\x00")
-    __check_size(size, len(data))
+    __check_size(matrix.w, size, len(data))
 
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
     cdef char **coding_ptrs = <char **> calloc(matrix.m, sizeof(char *))

@@ -27,6 +27,6 @@ if sys.platform == "win32":
 from .jerasure import Matrix, decode, encode
 
 
-def align_size(size: int) -> int:
-    """Return Aligned Size. Size should be divisible by 16."""
-    return ((size + 15) // 16) * 16
+def align_size(w: int, size: int) -> int:
+    """Return Aligned Size. Size should be divisible by w."""
+    return ((size + w - 1) // w) * w

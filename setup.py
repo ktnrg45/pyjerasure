@@ -95,6 +95,10 @@ CLASSIFIERS = [
 with open("README.md") as f:
     README = f.read()
 
+if sys.platform == "win32":
+    package_data = {"pyjerasure": [".libs/*/*.dll"]}
+else:
+    package_data = {}
 
 setup(
     name="pyjerasure",
@@ -114,4 +118,5 @@ setup(
     test_suite="tests",
     ext_modules=build_extensions(),
     zip_safe=False,
+    package_data=package_data,
 )

@@ -1,6 +1,6 @@
 """Test encode and decode."""
 
-import pyjerasure
+from pyjerasure import Matrix, decode, encode, align_size
 
 
 CAUCHY = {
@@ -74,29 +74,39 @@ LIBERATION = {
 def _test_decode(case):
     erasures = case["erasures"]
     erased = []
+    original = []
+    size = align_size(case["w"], case["size"])
     for index, item in enumerate(case["data"]):
+        block = item.ljust(size, b"\x00")
+        original.append(block)
         if index in erasures:
-            erased.append(bytes(case["size"]))
+            erased.append(bytes(size))
             continue
-        erased.append(item)
+        erased.append(block)
     data = b"".join(erased)
-    original = b"".join(case["data"])
-    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["w"])
+    original = b"".join(original)
+    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != original
-    restored = pyjerasure.decode(
-        matrix, data, erasures, case["size"], packetsize=packetsize
-    )
+    restored = decode(matrix, data, erasures, size, packetsize=packetsize)
     assert original == restored
 
 
 def _test_encode(case):
-    data = b"".join(case["data"][: case["k"]])
-    encoded = b"".join(case["data"])
-    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["w"])
+    size = align_size(case["w"], case["size"])
+    encoded = []
+    data = []
+    for index, item in enumerate(case["data"]):
+        block = item.ljust(size, b"\x00")
+        encoded.append(block)
+        if index < case["k"]:
+            data.append(block)
+    encoded = b"".join(encoded)
+    data = b"".join(data)
+    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != encoded
-    result = pyjerasure.encode(matrix, data, case["size"], packetsize=packetsize)
+    result = encode(matrix, data, size, packetsize=packetsize)
     assert encoded == result
 
 
