@@ -1,4 +1,4 @@
-# cython: language_level=3, boundscheck=True
+# cython: language_level=3
 """Implementation for pyjerasure."""
 
 import array
@@ -61,9 +61,25 @@ cdef class Matrix():
         return self.ptr != NULL
 
 
-def __check_size(int w, int size, int data_size):
-    if size % w != 0:
-        raise ValueError(f"Size must be divisible by {w}")
+def align_size(matrix, size: int, packetsize=0) -> int:
+    """Return Aligned Size. Size should be divisible by 16."""
+    if matrix.is_bitmatrix:
+        if packetsize <= 0:
+            raise ValueError("Packet size must be > 0")
+        width = matrix.w * packetsize
+    else:
+        width = 16
+    return ((size + width - 1) // width) * width
+
+def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
+    if matrix.is_bitmatrix:
+        if packetsize <= 0:
+            raise ValueError("Packet size must be > 0")
+        width = matrix.w * packetsize
+    else:
+        width = 16
+    if size % width != 0:
+        raise ValueError(f"Size must be divisible by {width}")
     if data_size % size != 0:
         raise ValueError(f"Data Size must be divisible by size")
 
@@ -101,7 +117,7 @@ cdef int allocate_block_ptrs(int k, int m, int size, array.array data, char **da
 def decode(matrix: Matrix, data: bytes, erasures, size: int, packetsize: int = 0):
     """Return original data."""
     __check_matrix(matrix, packetsize)
-    __check_size(matrix.w, size, len(data))
+    __check_size(matrix, size, len(data), packetsize)
 
     cdef int *erasures_ptr = <int *> calloc(len(erasures) + 1, sizeof(int));
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
@@ -128,7 +144,7 @@ def encode(matrix: Matrix, data: bytes, size: int, packetsize: int = 0):
     """Return data with coding blocks concatenated."""
     __check_matrix(matrix, packetsize)
     data = data.ljust((matrix.k + matrix.m) * size, b"\x00")
-    __check_size(matrix.w, size, len(data))
+    __check_size(matrix, size, len(data), packetsize)
 
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
     cdef char **coding_ptrs = <char **> calloc(matrix.m, sizeof(char *))

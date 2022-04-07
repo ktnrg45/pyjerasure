@@ -75,7 +75,10 @@ def _test_decode(case):
     erasures = case["erasures"]
     erased = []
     original = []
-    size = align_size(case["w"], case["size"])
+    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
+    packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
+
+    size = align_size(matrix, case["size"], packetsize)
     for index, item in enumerate(case["data"]):
         block = item.ljust(size, b"\x00")
         original.append(block)
@@ -85,17 +88,17 @@ def _test_decode(case):
         erased.append(block)
     data = b"".join(erased)
     original = b"".join(original)
-    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
-    packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != original
     restored = decode(matrix, data, erasures, size, packetsize=packetsize)
     assert original == restored
 
 
 def _test_encode(case):
-    size = align_size(case["w"], case["size"])
     encoded = []
     data = []
+    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
+    packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
+    size = align_size(matrix, case["size"], packetsize)
     for index, item in enumerate(case["data"]):
         block = item.ljust(size, b"\x00")
         encoded.append(block)
@@ -103,8 +106,6 @@ def _test_encode(case):
             data.append(block)
     encoded = b"".join(encoded)
     data = b"".join(data)
-    matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
-    packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != encoded
     result = encode(matrix, data, size, packetsize=packetsize)
     assert encoded == result
