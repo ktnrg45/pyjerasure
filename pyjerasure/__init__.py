@@ -1,9 +1,6 @@
 """Init for Jerasure."""
 import sys
 
-from .jerasure import Matrix, decode, encode
-
-
 # pylint: disable=import-outside-toplevel
 def __load():
     """Try to load dlls."""
@@ -23,10 +20,13 @@ def __load():
         pass
 
 
+if sys.platform == "win32":
+    __load()
+
+# pylint: disable=wrong-import-position
+from .jerasure import Matrix, decode, encode
+
+
 def align_size(size: int) -> int:
     """Return Aligned Size. Size should be divisible by 16."""
     return ((size + 15) // 16) * 16
-
-
-if sys.platform == "win32":
-    __load()

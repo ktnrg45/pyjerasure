@@ -3,8 +3,7 @@
 
 import array
 from cpython cimport array
-from libc.stdlib cimport malloc, calloc, free
-from libc.string cimport memcpy
+from libc.stdlib cimport calloc, free
 
 from pyjerasure cimport jerasure
 
@@ -13,29 +12,29 @@ cdef class Matrix():
     """Matrix Class."""
     TYPES = ["cauchy", "cauchy_good", "rs_vandermonde", "rs_r6", "liberation", "blaum_roth"]
 
-    def __cinit__(self, str type, int k = 0, int m = 0, int word_size = 0):
+    def __cinit__(self, str type, int k = 0, int m = 0, int w = 0):
         self.k = k
         self.m = m
-        self.word_size = word_size
+        self.w = w
         self.is_bitmatrix = False
         self.type = type
 
         if type == "cauchy":
-            self.ptr = jerasure.cauchy_original_coding_matrix(k, m, word_size)
+            self.ptr = jerasure.cauchy_original_coding_matrix(k, m, w)
         elif type == "cauchy_good":
-            self.ptr = jerasure.cauchy_good_general_coding_matrix(k, m, word_size)
+            self.ptr = jerasure.cauchy_good_general_coding_matrix(k, m, w)
         elif type == "rs_vandermonde":
-            self.ptr = jerasure.reed_sol_vandermonde_coding_matrix(k, m, word_size)
+            self.ptr = jerasure.reed_sol_vandermonde_coding_matrix(k, m, w)
             self.row_k_ones = 1
         elif type == "rs_r6":
-            self.ptr = jerasure.reed_sol_r6_coding_matrix(k, word_size)
+            self.ptr = jerasure.reed_sol_r6_coding_matrix(k, w)
             self.m = 2
         elif type == "liberation":
-            self.ptr = jerasure.liberation_coding_bitmatrix(k, word_size)
+            self.ptr = jerasure.liberation_coding_bitmatrix(k, w)
             self.m = 2
             self.is_bitmatrix = True
         elif type == "blaum_roth":
-            self.ptr = jerasure.blaum_roth_coding_bitmatrix(k, word_size)
+            self.ptr = jerasure.blaum_roth_coding_bitmatrix(k, w)
             self.m = 2
             self.is_bitmatrix = True
         else:
@@ -52,9 +51,9 @@ cdef class Matrix():
     def print_matrix(self):
         """Print matrix."""
         if self.is_bitmatrix:
-            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.word_size, self.k * self.word_size, self.word_size)
+            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
         else:
-            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.word_size)
+            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.w)
 
     @property
     def valid(self) -> bool:
@@ -73,11 +72,11 @@ def __check_matrix(Matrix matrix, int packetsize):
     if matrix.is_bitmatrix:
         if packetsize <= 0:
             raise ValueError("Packet Size must be greater than 0")
-        if matrix.word_size < 1 or matrix.word_size > 32:
-            raise ValueError("word_size must be between 1 and 32")
+        if matrix.w < 1 or matrix.w > 32:
+            raise ValueError("w must be between 1 and 32")
     else:
-        if matrix.word_size not in (8, 16, 32):
-            raise ValueError("word_size must be one of (8, 16, 32)")
+        if matrix.w not in (8, 16, 32):
+            raise ValueError("w must be one of (8, 16, 32)")
 
 cdef int allocate_erasures(int k, int* erasures, erased):
     cdef int i = 0
@@ -112,9 +111,9 @@ def decode(matrix: Matrix, data: bytes, erasures, size: int, packetsize: int = 0
     allocate_erasures(matrix.k, erasures_ptr, erasures)
     allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
     if matrix.is_bitmatrix:
-        result = jerasure.jerasure_bitmatrix_decode(matrix.k, matrix.m, matrix.word_size, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size, packetsize)
+        result = jerasure.jerasure_bitmatrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size, packetsize)
     else:
-        result = jerasure.jerasure_matrix_decode(matrix.k, matrix.m, matrix.word_size, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size)
+        result = jerasure.jerasure_matrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size)
 
     free(data_ptrs)
     free(coding_ptrs)
@@ -137,9 +136,9 @@ def encode(matrix: Matrix, data: bytes, size: int, packetsize: int = 0):
 
     allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
     if matrix.is_bitmatrix:
-        jerasure.jerasure_bitmatrix_encode(matrix.k, matrix.m, matrix.word_size, matrix.ptr, data_ptrs, coding_ptrs, size, packetsize)
+        jerasure.jerasure_bitmatrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size, packetsize)
     else:
-        jerasure.jerasure_matrix_encode(matrix.k, matrix.m, matrix.word_size, matrix.ptr, data_ptrs, coding_ptrs, size)
+        jerasure.jerasure_matrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size)
 
     free(data_ptrs)
     free(coding_ptrs)

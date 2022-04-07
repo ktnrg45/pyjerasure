@@ -7,7 +7,7 @@ CAUCHY = {
     "type": "cauchy",
     "k": 4,
     "m": 1,
-    "word_size": 16,
+    "w": 16,
     "size": 480,
     "erasures": [1],
     "data": [
@@ -23,7 +23,7 @@ RS_R6 = {
     "type": "rs_r6",
     "k": 4,
     "m": 2,
-    "word_size": 8,
+    "w": 8,
     "size": 8,
     "erasures": [1, 3],
     "data": [
@@ -40,7 +40,7 @@ RS_VANDERMONDE = {
     "type": "rs_vandermonde",
     "k": 4,
     "m": 1,
-    "word_size": 8,
+    "w": 8,
     "size": 8,
     "erasures": [2],
     "data": [
@@ -56,7 +56,7 @@ LIBERATION = {
     "type": "liberation",
     "k": 4,
     "m": 2,
-    "word_size": 5,
+    "w": 5,
     "size": 40,
     "packetsize": 8,
     "erasures": [2, 3],
@@ -81,7 +81,7 @@ def _test_decode(case):
         erased.append(item)
     data = b"".join(erased)
     original = b"".join(case["data"])
-    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["word_size"])
+    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != original
     restored = pyjerasure.decode(
@@ -93,7 +93,7 @@ def _test_decode(case):
 def _test_encode(case):
     data = b"".join(case["data"][: case["k"]])
     encoded = b"".join(case["data"])
-    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["word_size"])
+    matrix = pyjerasure.Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     assert data != encoded
     result = pyjerasure.encode(matrix, data, case["size"], packetsize=packetsize)
