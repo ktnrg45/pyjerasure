@@ -51,6 +51,9 @@ cdef class Matrix():
 
     def print_matrix(self):
         """Print matrix."""
+        if not self.valid:
+            print(None)
+            return
         if self.is_bitmatrix:
             jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
         else:
@@ -86,6 +89,8 @@ def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
 
 
 def __check_matrix(Matrix matrix, int packetsize):
+    if not matrix.valid:
+        raise ValueError("Matrix is not valid")
     if matrix.is_bitmatrix:
         if packetsize <= 0:
             raise ValueError("Packet Size must be greater than 0")
