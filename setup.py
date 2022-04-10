@@ -43,7 +43,7 @@ def build_extensions():
 
     name = "pyjerasure.jerasure"
     include_dirs = [include_path]
-    libraries = ["Jerasure"]
+    libraries = ["Jerasure", "gf_complete"]
     try:
         # pylint: disable=import-outside-toplevel
         from Cython.Build import cythonize
