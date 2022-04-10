@@ -53,5 +53,5 @@ jobs:
           python -m pip install Cython wheel pytest
           python setup.py bdist_wheel
           # run tests on built wheel
-          python -m pip install dist/*.whl
+          python -m pip install dist/$(ls dist)
           pytest tests
