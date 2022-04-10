@@ -40,7 +40,12 @@ def align_size(matrix: Matrix, size: int, packetsize: int = 0) -> int:
 
 
 def decode_from_bytes(
-    matrix: Matrix, data: bytes, erasures: Iterable[int], size: int, packetsize: int = 0
+    matrix: Matrix,
+    data: bytes,
+    erasures: Iterable[int],
+    size: int,
+    packetsize: int = 0,
+    data_only: bool = False,
 ) -> bytes:
     """Return decoded data. Passthrough to decode.
 
@@ -51,8 +56,9 @@ def decode_from_bytes(
     :param erasures: An iterable of ints which describes the indexes of missing/erased blocks.
     :param size: The size/length of a data block.
     :param packetsize: Packet size of packets in blocks. Only needed for bitmatrixes.
+    :param data_only: If True return data blocks only, else return data and coding blocks.
     """
-    return decode(matrix, data, erasures, size, packetsize)
+    return decode(matrix, data, erasures, size, packetsize, data_only)
 
 
 def encode_from_bytes(
@@ -74,6 +80,7 @@ def decode_from_blocks(
     blocks: Iterable[bytes],
     erasures: Iterable[int],
     packetsize: int = 0,
+    data_only: bool = False,
 ) -> "list[bytes]":
     """Return list of decoded data blocks.
 
@@ -82,6 +89,7 @@ def decode_from_blocks(
         Blocks will be padded automatically.
     :param erasures: An iterable of ints which describes the indexes of missing/erased blocks.
     :param packetsize: Packet size of packets in blocks. Only needed for bitmatrixes.
+    :param data_only: If True return data blocks only, else return data and coding blocks.
     """
     if len(blocks) < 1:
         raise ValueError("Length of blocks cannot be < 1")
@@ -90,11 +98,19 @@ def decode_from_blocks(
     data = []
     for block in blocks:
         data.append(block.ljust(size, b"\x00"))
-    decoded = decode(matrix, b"".join(data), erasures, size, packetsize)
+    decoded = decode(matrix, b"".join(data), erasures, size, packetsize, data_only)
     if not decoded:
         return []
-    assert len(decoded) == matrix.k * size
-    return [decoded[index * size : (index + 1) * size] for index in range(0, matrix.k)]
+    if data_only:
+        assert len(decoded) == matrix.k * size
+        return [
+            decoded[index * size : (index + 1) * size] for index in range(0, matrix.k)
+        ]
+    assert len(decoded) == (matrix.k + matrix.m) * size
+    return [
+        decoded[index * size : (index + 1) * size]
+        for index in range(0, matrix.k + matrix.m)
+    ]
 
 
 def encode_from_blocks(

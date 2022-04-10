@@ -97,10 +97,12 @@ def _test_decode(case):
     data = b"".join(erased)
     original = b"".join(original)
     assert data != original
-    result = decode(matrix, data, erasures, size, packetsize=packetsize)
+    result = decode(matrix, data, erasures, size, packetsize=packetsize, data_only=True)
     assert original == result
 
-    result_blocks = decode_from_blocks(matrix, case["data"], erasures, packetsize)
+    result_blocks = decode_from_blocks(
+        matrix, case["data"], erasures, packetsize, data_only=True
+    )
     assert original == b"".join(result_blocks)
 
 

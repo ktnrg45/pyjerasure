@@ -126,7 +126,7 @@ cdef int allocate_block_ptrs(int k, int m, int size, array.array data, char **da
     return 0
 
 
-def decode(Matrix matrix, bytes data, erasures: Iterable[int], int size, int packetsize = 0):
+def decode(Matrix matrix, bytes data, erasures: Iterable[int], int size, int packetsize = 0, bint data_only=False):
     """Return original data."""
     __check_matrix(matrix, packetsize)
     __check_size(matrix, size, len(data), packetsize)
@@ -159,7 +159,9 @@ def decode(Matrix matrix, bytes data, erasures: Iterable[int], int size, int pac
 
     if result < 0:
         return b""
-    return data_array.tobytes()[:matrix.k * size]
+    if data_only:
+        return data_array.tobytes()[:matrix.k * size]
+    return data_array.tobytes()
 
 
 def encode(Matrix matrix, bytes data, int size, int packetsize = 0):
