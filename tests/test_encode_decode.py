@@ -1,6 +1,13 @@
 """Test encode and decode."""
 
-from pyjerasure import Matrix, decode, encode, align_size
+from pyjerasure import (
+    Matrix,
+    decode,
+    encode,
+    align_size,
+    decode_from_blocks,
+    encode_from_blocks,
+)
 
 
 CAUCHY = {
@@ -81,7 +88,8 @@ def _test_decode(case):
     size = align_size(matrix, case["size"], packetsize)
     for index, item in enumerate(case["data"]):
         block = item.ljust(size, b"\x00")
-        original.append(block)
+        if index < case["k"]:
+            original.append(block)
         if index in erasures:
             erased.append(bytes(size))
             continue
@@ -89,8 +97,11 @@ def _test_decode(case):
     data = b"".join(erased)
     original = b"".join(original)
     assert data != original
-    restored = decode(matrix, data, erasures, size, packetsize=packetsize)
-    assert original == restored
+    result = decode(matrix, data, erasures, size, packetsize=packetsize)
+    assert original == result
+
+    result_blocks = decode_from_blocks(matrix, case["data"], erasures, packetsize)
+    assert original == b"".join(result_blocks)
 
 
 def _test_encode(case):
@@ -109,6 +120,9 @@ def _test_encode(case):
     assert data != encoded
     result = encode(matrix, data, size, packetsize=packetsize)
     assert encoded == result
+
+    result_blocks = encode_from_blocks(matrix, case["data"], packetsize)
+    assert encoded == b"".join(result_blocks)
 
 
 def test_cauchy_decode():

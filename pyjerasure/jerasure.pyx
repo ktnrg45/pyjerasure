@@ -3,6 +3,7 @@
 """Implementation for pyjerasure."""
 
 import array
+from typing import Iterable
 from cpython cimport array
 from libc.stdlib cimport calloc, free
 
@@ -65,17 +66,6 @@ cdef class Matrix():
         return self.ptr != NULL
 
 
-def align_size(Matrix matrix, int size, int packetsize=0) -> int:
-    """Return Aligned Size. Size should be divisible by 16."""
-    if matrix.is_bitmatrix:
-        if packetsize <= 0:
-            raise ValueError("Packet size must be > 0")
-        width = matrix.w * packetsize
-    else:
-        width = 16
-    return ((size + width - 1) // width) * width
-
-
 def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
     if matrix.is_bitmatrix:
         if packetsize <= 0:
@@ -85,6 +75,8 @@ def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
         width = 16
     if size % width != 0:
         raise ValueError(f"Size must be divisible by {width}")
+    if size <= 0:
+        raise ValueError(f"Size cannot be < 1")
     if data_size % size != 0:
         raise ValueError(f"Data Size must be divisible by size")
     if data_size <= 0:
@@ -128,7 +120,7 @@ cdef int allocate_block_ptrs(int k, int m, int size, array.array data, char **da
     return 0
 
 
-def decode(Matrix matrix, bytes data, erasures, int size, int packetsize = 0):
+def decode(Matrix matrix, bytes data, erasures: Iterable[int], int size, int packetsize = 0):
     """Return original data."""
     __check_matrix(matrix, packetsize)
     __check_size(matrix, size, len(data), packetsize)
@@ -161,7 +153,7 @@ def decode(Matrix matrix, bytes data, erasures, int size, int packetsize = 0):
 
     if result < 0:
         return b""
-    return data_array.tobytes()
+    return data_array.tobytes()[:matrix.k * size]
 
 
 def encode(Matrix matrix, bytes data, int size, int packetsize = 0):
