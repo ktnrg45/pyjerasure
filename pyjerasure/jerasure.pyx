@@ -11,7 +11,13 @@ from pyjerasure cimport jerasure
 
 
 cdef class Matrix():
-    """Matrix Class."""
+    """Matrix Class.
+
+    :param type: Matrix type
+    :param k: Number of data blocks
+    :param m: Number of coding blocks
+    :param w: Word Size
+    """
     TYPES = ["cauchy", "cauchy_good", "rs_vandermonde", "rs_r6", "liberation", "blaum_roth"]
 
     def __cinit__(self, str type, int k = 0, int m = 0, int w = 0):
@@ -50,7 +56,7 @@ cdef class Matrix():
     def __repr__(self):
         return f"{str(self.__class__)[:-1]} type={self.type} valid={self.valid}>"
 
-    def print_matrix(self):
+    def print(self):
         """Print matrix."""
         if not self.valid:
             print(None)
