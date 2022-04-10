@@ -1,4 +1,5 @@
-# cython: language_level=3
+# cython: language_level=3, boundscheck=True
+# distutils: language=c++
 """Implementation for pyjerasure."""
 
 import array

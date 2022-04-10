@@ -3,7 +3,7 @@
 """Definitions for Jerasure."""
 
 
-cdef extern from "jerasure.h":
+cdef extern from "jerasure.h" nogil:
 
     cdef int *jerasure_matrix_to_bitmatrix(int k, int m, int w, int *matrix)
     cdef int **jerasure_dumb_bitmatrix_to_schedule(int k, int m, int w, int *bitmatrix)
@@ -56,7 +56,7 @@ cdef extern from "jerasure.h":
     cdef void jerasure_get_stats(double *fill_in)
 
 
-cdef extern from "cauchy.h":
+cdef extern from "cauchy.h" nogil:
     cdef int *cauchy_original_coding_matrix(int k, int m, int w)
     cdef int *cauchy_xy_coding_matrix(int k, int m, int w, int *x, int *y)
     cdef void cauchy_improve_coding_matrix(int k, int m, int w, int *matrix)
@@ -64,13 +64,13 @@ cdef extern from "cauchy.h":
     cdef int cauchy_n_ones(int n, int w)
 
 
-cdef extern from "liberation.h":
+cdef extern from "liberation.h" nogil:
     cdef int *liberation_coding_bitmatrix(int k, int w)
     cdef int *liber8tion_coding_bitmatrix(int k)
     cdef int *blaum_roth_coding_bitmatrix(int k, int w)
 
 
-cdef extern from "reed_sol.h":
+cdef extern from "reed_sol.h" nogil:
     cdef int *reed_sol_vandermonde_coding_matrix(int k, int m, int w)
     cdef int *reed_sol_extended_vandermonde_matrix(int rows, int cols, int w)
     cdef int *reed_sol_big_vandermonde_distribution_matrix(int rows, int cols, int w)
