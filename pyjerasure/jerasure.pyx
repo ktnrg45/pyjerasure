@@ -65,7 +65,7 @@ cdef class Matrix():
         return self.ptr != NULL
 
 
-def align_size(matrix, size: int, packetsize=0) -> int:
+def align_size(Matrix matrix, int size, int packetsize=0) -> int:
     """Return Aligned Size. Size should be divisible by 16."""
     if matrix.is_bitmatrix:
         if packetsize <= 0:
@@ -74,6 +74,7 @@ def align_size(matrix, size: int, packetsize=0) -> int:
     else:
         width = 16
     return ((size + width - 1) // width) * width
+
 
 def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
     if matrix.is_bitmatrix:
@@ -86,6 +87,8 @@ def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
         raise ValueError(f"Size must be divisible by {width}")
     if data_size % size != 0:
         raise ValueError(f"Data Size must be divisible by size")
+    if data_size <= 0:
+        raise ValueError(f"Data Size cannot be < 1")
 
 
 def __check_matrix(Matrix matrix, int packetsize):
@@ -100,10 +103,15 @@ def __check_matrix(Matrix matrix, int packetsize):
         if matrix.w not in (8, 16, 32):
             raise ValueError("w must be one of (8, 16, 32)")
 
-cdef int allocate_erasures(int k, int* erasures, erased):
+
+cdef int allocate_erasures(int k, int m, int* erasures, erased):
     cdef int i = 0
     cdef int erased_index = 0
     for i in range(len(erased)):
+        if not isinstance(erased[i], int):
+            return 1
+        if erased[i] not in range(0, k + m):
+            return 1
         erasures[i] = erased[i]
     erasures[len(erased)] = -1  # Important. Make last index '-1'
     return 0
@@ -120,22 +128,32 @@ cdef int allocate_block_ptrs(int k, int m, int size, array.array data, char **da
     return 0
 
 
-def decode(matrix: Matrix, data: bytes, erasures, size: int, packetsize: int = 0):
+def decode(Matrix matrix, bytes data, erasures, int size, int packetsize = 0):
     """Return original data."""
     __check_matrix(matrix, packetsize)
     __check_size(matrix, size, len(data), packetsize)
 
+    cdef int result = 0
+    cdef int error = 0
     cdef int *erasures_ptr = <int *> calloc(len(erasures) + 1, sizeof(int));
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
     cdef char **coding_ptrs = <char **> calloc(matrix.m, sizeof(char *))
     cdef array.array data_array = array.array("I", data)
 
-    allocate_erasures(matrix.k, erasures_ptr, erasures)
-    allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
-    if matrix.is_bitmatrix:
-        result = jerasure.jerasure_bitmatrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size, packetsize)
-    else:
-        result = jerasure.jerasure_matrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size)
+    error = allocate_erasures(matrix.k, matrix.m, erasures_ptr, erasures)
+    if error != 0:
+        result = -1
+    error = allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
+    if error != 0:
+        result = -1
+    if len(erasures) <= 0:
+        result = -1
+    
+    if result == 0:
+        if matrix.is_bitmatrix:
+            result = jerasure.jerasure_bitmatrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size, packetsize)
+        else:
+            result = jerasure.jerasure_matrix_decode(matrix.k, matrix.m, matrix.w, matrix.ptr, matrix.row_k_ones, erasures_ptr, data_ptrs, coding_ptrs, size)
 
     free(data_ptrs)
     free(coding_ptrs)
@@ -146,23 +164,30 @@ def decode(matrix: Matrix, data: bytes, erasures, size: int, packetsize: int = 0
     return data_array.tobytes()
 
 
-def encode(matrix: Matrix, data: bytes, size: int, packetsize: int = 0):
+def encode(Matrix matrix, bytes data, int size, int packetsize = 0):
     """Return data with coding blocks concatenated."""
     __check_matrix(matrix, packetsize)
     data = data.ljust((matrix.k + matrix.m) * size, b"\x00")
     __check_size(matrix, size, len(data), packetsize)
 
+    cdef int result = 0
+    cdef int error = 0
     cdef char **data_ptrs = <char **> calloc(matrix.k, sizeof(char *))
     cdef char **coding_ptrs = <char **> calloc(matrix.m, sizeof(char *))
     cdef array.array data_array = array.array("I", data)
 
-    allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
-    if matrix.is_bitmatrix:
-        jerasure.jerasure_bitmatrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size, packetsize)
-    else:
-        jerasure.jerasure_matrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size)
+    error = allocate_block_ptrs(matrix.k, matrix.m, size, data_array, data_ptrs, coding_ptrs)
+    if error != 0:
+        result = -1
+    if result == 0:
+        if matrix.is_bitmatrix:
+            jerasure.jerasure_bitmatrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size, packetsize)
+        else:
+            jerasure.jerasure_matrix_encode(matrix.k, matrix.m, matrix.w, matrix.ptr, data_ptrs, coding_ptrs, size)
 
     free(data_ptrs)
     free(coding_ptrs)
 
+    if result < 0:
+        return b""
     return data_array.tobytes()
