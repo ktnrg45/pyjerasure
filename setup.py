@@ -60,7 +60,7 @@ def build_extensions():
             ]
         )
     except ImportError:
-        sources = ["pyjerasure/jerasure.c"]
+        sources = ["pyjerasure/jerasure.cpp"]
         extensions = [
             Extension(
                 name,
