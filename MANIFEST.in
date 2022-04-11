@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
+include requirements.txt
 include pyjerasure/jerasure.pyx
 include pyjerasure/jerasure.pxd
 include pyjerasure/jerasure.cpp
