@@ -28,11 +28,28 @@ jobs:
         pip install dist/*.tar.gz
         pip install pytest
         pytest tests
-        rm dist/*-linux*.whl
 
     - name: Publish
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.PYPI_PASSWORD }}
+        
+  manylinux:
+    name: manylinux ${{matrix.platform}}-${{matrix.arch}}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64] #[x86_64, aarch64]
+        platform: [manylinux_2_24] #[manylinux2014, manylinux_2_24]
+    container: quay.io/pypa/${{matrix.platform}}_${{matrix.arch}}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        
+      - name: Build
+        run: |
+          scripts/manylinux.sh
+      
         
