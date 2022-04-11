@@ -15,10 +15,24 @@ jobs:
       with:
         python-version: 3.8
         
-    - name: install
+    - name: build sdist
       run: |
-        python setup.py sdist
+        sudo apt update
+        sudo apt install libjerasure-dev -y
+        pip install wheel cython
+        python setup.py build_ext --inplace sdist
+        pip uninstall cython -y
+        
+    - name: install/test sdist
+      run: |
         pip install dist/*.tar.gz
         pip install pytest
         pytest tests
+        rm dist/*-linux*.whl
+
+    - name: Publish
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_PASSWORD }}
         
