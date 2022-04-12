@@ -36,8 +36,10 @@ def get_include_path():
 
 def build_extensions():
     """Return extensions."""
+    library_dirs = []
     if sys.platform == "win32":
         include_path = "Include"
+        library_dirs = ["libs"]
     else:
         include_path = get_include_path()
 
@@ -56,6 +58,7 @@ def build_extensions():
                     sources,
                     include_dirs=include_dirs,
                     libraries=libraries,
+                    library_dirs=library_dirs,
                 ),
             ]
         )
