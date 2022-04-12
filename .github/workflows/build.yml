@@ -3,53 +3,141 @@ on:
   workflow_dispatch:
 
 jobs:
-  sdist:
-    name: sdist
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+#   sdist:
+#     name: sdist
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: Checkout
+#       uses: actions/checkout@v3
 
-    - name: python-install
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+#     - name: Install Python
+#       uses: actions/setup-python@v2
+#       with:
+#         python-version: 3.8
         
-    - name: build sdist
-      run: |
-        sudo apt update
-        sudo apt install libjerasure-dev -y
-        pip install wheel cython
-        python setup.py build_ext --inplace sdist
-        pip uninstall cython -y
+#     - name: Build sdist
+#       run: |
+#         sudo apt update
+#         sudo apt install libjerasure-dev -y
+#         pip install wheel cython
+#         python setup.py build_ext --inplace sdist
+#         pip uninstall cython -y
         
-    - name: install/test sdist
-      run: |
-        pip install dist/*.tar.gz
-        pip install pytest
-        pytest tests
+#     - name: install/test sdist (no cython)
+#       run: |
+#         pip install dist/*.tar.gz
+#         pip install pytest
+#         pytest tests
+        
+#     - name: Upload Artifact
+#       uses: actions/upload-artifact@v1
+#       with:
+#         name: dist
+#         path: dist/
 
-    - name: Publish
-      if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        password: ${{ secrets.PYPI_PASSWORD }}
+#   test-linux:
+#     name: " Linux py-${{ matrix.config.python }} ${{matrix.config.os}}"
+#     runs-on: ${{ matrix.config.os }}
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         config:
+#           - {os: ubuntu-latest, python: "3.8"}
+#           - {os: ubuntu-latest, python: "3.9"}
+#           - {os: ubuntu-latest, python: "3.10"}
+          
+#     steps:
+#     - uses: actions/checkout@v3
+#       name: Checkout
+
+#     - name: Python ${{ matrix.config.python }}
+#       uses: actions/setup-python@v1
+#       with:
+#         python-version: ${{ matrix.config.python }}
         
-  manylinux:
-    name: manylinux ${{matrix.platform}}-${{matrix.arch}}
-    runs-on: ubuntu-latest
+#     - name: Install Dependencies
+#       run: |
+#         sudo apt update
+#         sudo apt install libjerasure-dev -y
+        
+#     - name: Build
+#       run: |
+#         pip install cython wheel pytest
+#         python setup.py bdist_wheel
+#         pip uninstall cython -y
+#         pip install dist/*.whl
+    
+#     - name: Test
+#       run: |
+#         pytest tests
+
+  test-windows:
+    name: "Windows py-${{ matrix.config.python }} ${{matrix.config.os}}"
+    runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: true
       matrix:
-        arch: [x86_64] #[x86_64, aarch64]
-        platform: [manylinux_2_24] #[manylinux2014, manylinux_2_24]
-    container: quay.io/pypa/${{matrix.platform}}_${{matrix.arch}}
+        config:
+          - {os: windows-latest, python: "3.8", arch: win32, py-arch: x86}
+          - {os: windows-latest, python: "3.9", arch: win32, py-arch: x86}
+          - {os: windows-latest, python: "3.10", arch: win32, py-arch: x86}
+          - {os: windows-latest, python: "3.8", arch: x64, py-arch: x64}
+          - {os: windows-latest, python: "3.9", arch: x64, py-arch: x64}
+          - {os: windows-latest, python: "3.10", arch: x64, py-arch: x64}
+          
+    env:
+      REPO_NAME: jerasure
+      REPO: https://github.com/ktnrg45/jerasure.git
+      MSVC_VER: "Visual Studio 17 2022"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        
+      - uses: actions/checkout@v3
+        name: Checkout
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          architecture: ${{ matrix.config.py-arch }}
+          python-version: ${{ matrix.config.python }}
+
+      - name: Build Dependencies
+        run: |
+          git clone --recurse-submodules ${{ env.REPO }}
+          cd ${{ env.REPO_NAME }}
+          mkdir build
+          cd build
+          cmake.exe -G "${{ env.MSVC_VER }}" -A ${{ matrix.config.arch }} ..
+          cmake.exe --build . --config Release
+          cd ../../
+          python -m venv venv
+          venv/scripts/activate
+          mkdir venv/libs
+          mkdir Include
+          cp jerasure/include/*.h Include
+          cp jerasure/gf-complete/include/*.h Include
+          cp jerasure/build/Release/*.lib venv/libs
+          cp jerasure/build/gf-complete/Release/*.lib venv/libs
+
       - name: Build
         run: |
-          scripts/manylinux.sh
+          pip install Cython wheel pytest
+          python setup.py bdist_wheel
+          pip uninstall cython -y
+          pip install dist/$(ls dist)
+          
+      - name: Test
+        run: |
+          pytest tests
+          
+#   publish:
+#     runs-on: ubuntu-latest
+#     needs: [sdist]
+#     steps:
+#       - name: Publish
+#         if: startsWith(github.ref, 'refs/tags')
+#         uses: pypa/gh-action-pypi-publish@master
+#         with:
+#           user: __token__
+#           password: ${{ secrets.PYPI_PASSWORD }}
       
         
