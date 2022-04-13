@@ -4,20 +4,101 @@ Python Wrapper library for libjerasure
 Only basic encoding/decoding methods are implemented.
 
 ## Usage
+
+In this example we have blocks of data that we would like to protect against data loss. 
+
 ```
-import random
+data = [
+  b"hello",
+  b"world",
+  b"data-123",
+  b"data-456",
+]
+```
+First we import the library and setup our matrix.
+
+```
 import pyjerasure
 
-k = 4
-m = 2
-w = 8
-size = 8
+matrix_type = "rs_r6"
+k = 4  # Number of data blocks
+m = 2  # Number of coding blocks. This is also the maximum number of blocks that can be lost.
+w = 8  # Word Size
 
-data = random.randbytes((k + m) * size)
+matrix = pyjerasure.Matrix(matrix_type, k, m, w)
+```
+Next we encode our data using the matrix.
+This adds redundant coding blocks to our data.
 
-matrix = pyjerasure.Matrix("rs_r6", k, m, w)
-data_with_coding = pyjerasure.encode(matrix, data, size)
+```
+coded_data = pyjerasure.encode_from_blocks(matrix, data)
+print(coded_data)
 
+#  Outputs:
+#
+#  [b'hello\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'world\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'data-123\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'data-456\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'\x1f\n\x1e\x00\x0b\x05\x07\x05\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'\x0c\r\xc2\x02fy}a\x00\x00\x00\x00\x00\x00\x00\x00']
+#
+```
+Notice how our data has been padded with zeroed bytes.
+This is necessary for encoding our data.
+The `*_from_blocks` method automatically pads data to the correct length.
+
+
+Now we're going to simulate a loss of data by deleting 'm' blocks.
+
+```
+missing = [2, 3]
+for i in missing:
+  coded_data[i] = b""
+print(coded_data)
+
+#  Outputs:
+#
+#  [b'hello\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'world\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'',
+#   b'',
+#   b'\x1f\n\x1e\x00\x0b\x05\x07\x05\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'\x0c\r\xc2\x02fy}a\x00\x00\x00\x00\x00\x00\x00\x00']
+#
+```
+
+Recovering the data can be done if we know the indexes of the missing blocks.
+
+```
+restored = pyjerasure.decode_from_blocks(matrix, coded_data, missing)
+print(restored)
+
+#  Outputs:
+#
+#  [b'hello\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'world\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'data-123\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'data-456\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'\x1f\n\x1e\x00\x0b\x05\x07\x05\x00\x00\x00\x00\x00\x00\x00\x00',
+#   b'\x0c\r\xc2\x02fy}a\x00\x00\x00\x00\x00\x00\x00\x00']
+#
+```
+
+# Installing
+
+## Using pip
+```
+pip install pyjerasure
+```
+
+## From Source
+Installing from source requires `libjerasure-dev` to be installed.
+In addition, `cython` may need to be installed as well.
+
+```
+pip install cython
+python setup.py install build_ext
 ```
 
 
