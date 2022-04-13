@@ -37,7 +37,7 @@ jobs:
         pytest tests
         
     - name: Upload Artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: dist
         path: dist/
@@ -187,7 +187,7 @@ jobs:
           pytest tests
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist/
@@ -205,7 +205,7 @@ jobs:
           build-requirements: 'cython'
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist/*-manylinux*.whl
@@ -215,7 +215,7 @@ jobs:
     needs: [sdist, manylinux, test-windows, test-linux]
     steps:
       - name: Download Wheels
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: dist
           path: dist/
