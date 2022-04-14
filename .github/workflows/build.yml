@@ -333,7 +333,8 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [sdist, cibuildwheel, test-windows, test-linux]
+    needs: [sdist, cibuildwheel, build-windows, test-linux]
+    if: startsWith(github.ref, 'refs/tags')
     steps:
       - name: Download Wheels
         uses: actions/download-artifact@v3
@@ -341,7 +342,6 @@ jobs:
           name: dist
           path: dist/
       - name: Publish
-        if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
