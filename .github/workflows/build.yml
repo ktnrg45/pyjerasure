@@ -1,13 +1,14 @@
 name: build
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 env:
   REPO_NAME: jerasure
   REPO: https://github.com/ktnrg45/jerasure.git
   MSVC_VER: "Visual Studio 17 2022"
-  CACHE_KEY: "1.0.0-1"
+  CACHE_KEY: "1.0.0-2"
 
 jobs:
   sdist:
@@ -30,7 +31,7 @@ jobs:
         python setup.py build_ext --inplace sdist
         pip uninstall cython -y
         
-    - name: install/test sdist (no cython)
+    - name: Install/Test sdist (no cython)
       run: |
         pip install dist/*.tar.gz
         pip install pytest
@@ -81,7 +82,7 @@ jobs:
     name: "Build Dependencies Windows ${{ matrix.config.arch }} ${{matrix.config.os}}"
     runs-on: ${{ matrix.config.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config:
           - {os: windows-latest, arch: win32}
@@ -113,7 +114,6 @@ jobs:
       - name: Build Dependencies
         if: steps.cache-libs.outputs.cache-hit != 'true'
         run: |
-          git clone --recurse-submodules ${{ env.REPO }}
           cd ${{ env.REPO_NAME }}
           mkdir build
           cd build
@@ -124,8 +124,63 @@ jobs:
           cp jerasure/build/Release/*.lib libs
           cp jerasure/build/gf-complete/Release/*.lib libs
 
+
   test-windows:
-    name: "Windows ${{matrix.config.arch}} py-${{ matrix.config.python }} ${{matrix.config.os}}"
+    name: "Test Windows ${{matrix.config.arch}} py-${{ matrix.config.python }} ${{matrix.config.os}}"
+    needs: [build-deps-windows]
+    if: startsWith(github.ref, 'refs/tags') != true
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - {os: windows-latest, python: "3.6", arch: x64, py-arch: x64}
+          - {os: windows-latest, python: "3.10", arch: x64, py-arch: x64}
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout
+
+      - name: Cache Headers
+        id: cache-headers
+        uses: actions/cache@v3
+        with:
+          path: Include
+          key: "Include-${{ env.CACHE_KEY }}"
+          
+      - name: Cache Libs
+        id: cache-libs
+        uses: actions/cache@v3
+        with:
+          path: libs
+          key: "libs-${{ matrix.config.arch }}-${{ env.CACHE_KEY}}"
+
+      - name: Retrieve Headers
+        if: steps.cache-headers.outputs.cache-hit != 'true'
+        run: exit 1
+          
+      - name: Retrieve Libs
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        run: exit 1
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          architecture: ${{ matrix.config.py-arch }}
+          python-version: ${{ matrix.config.python }}
+
+      - name: Build
+        run: |
+          pip install Cython wheel pytest
+          python setup.py bdist_wheel
+          pip uninstall cython -y
+          pip install $(ls dist)
+          
+      - name: Test
+        run: |
+          pytest tests
+
+  build-windows:
+    name: "Build Windows ${{matrix.config.arch}} py-${{ matrix.config.python }} ${{matrix.config.os}}"
+    if: startsWith(github.ref, 'refs/tags')
     needs: [build-deps-windows]
     runs-on: ${{ matrix.config.os }}
     strategy:
@@ -191,28 +246,94 @@ jobs:
         with:
           name: dist
           path: dist/
+          
+  cibuildwheel:
+    name: Build wheels on ${{ matrix.os }}  ${{ matrix.arch }}
+    if: startsWith(github.ref, 'refs/tags')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: aarch64
+          - os: ubuntu-latest
+            arch: i686
+          - os: ubuntu-latest
+            arch: x86_64
+#           - os: macos-latest
+#             arch: arm64
+#           - os: macos-latest
+#             arch: x86_64
+#           - os: windows-latest
+#             arch: AMD64
+#           - os: windows-latest
+#             arch: x86
 
-  manylinux:
-    runs-on: ubuntu-latest
+    env:
+      CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
+      CIBW_MANYLINUX_I686_IMAGE: manylinux_2_24
+      CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux_2_24
+      CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_24
+      CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_24
+      CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_24
+      CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_BEFORE_BUILD: pip install cython
+      CIBW_BEFORE_ALL_LINUX: script/cibuild.sh
+      CIBW_SKIP: pp* *-musllinux*
+      CIBW_TEST_REQUIRES: pytest
+      CIBW_TEST_COMMAND: pytest {project}/tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: AuditWheel
-        uses: RalfG/python-wheels-manylinux-build@v0.4.2-manylinux_2_24_x86_64
-        with:
-          system-packages: 'libjerasure-dev'
-          build-requirements: 'cython'
+      - name: Set up QEMU
+        if: matrix.os == 'ubuntu-latest'
+        uses: docker/setup-qemu-action@v1
+        
+#       - name: Cache Headers
+#         if: matrix.os == 'windows-latest'
+#         id: cache-headers
+#         uses: actions/cache@v3
+#         with:
+#           path: Include
+#           key: "Include-${{ env.CACHE_KEY }}"
+          
+#       - name: Cache Libs
+#         if: matrix.os == 'windows-latest'
+#         id: cache-libs
+#         uses: actions/cache@v3
+#         with:
+#           path: libs
+#           key: "libs-${{ matrix.config.arch }}-${{ env.CACHE_KEY}}"
 
-      - name: Upload Artifacts
+#       - name: Retrieve Headers
+#         if: matrix.os == 'windows-latest' && steps.cache-headers.outputs.cache-hit != 'true'
+#         run: exit 1
+          
+#       - name: Retrieve Libs
+#         if: matrix.os == 'windows-latest' && steps.cache-libs.outputs.cache-hit != 'true'
+#         run: exit 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir dist
+        
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: dist/*-manylinux*.whl
+          path: dist/
 
   publish:
     runs-on: ubuntu-latest
-    needs: [sdist, manylinux, test-windows, test-linux]
+    if: startsWith(github.ref, 'refs/tags')
+    needs: [sdist, cibuildwheel, test-windows, test-linux]
     steps:
       - name: Download Wheels
         uses: actions/download-artifact@v3
@@ -220,10 +341,26 @@ jobs:
           name: dist
           path: dist/
       - name: Publish
-        if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.PYPI_PASSWORD }}
-      
-        
+          skip_existing: true
+
+#   manylinux:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v3
+
+#       - name: AuditWheel
+#         uses: RalfG/python-wheels-manylinux-build@v0.4.2-manylinux_2_24_x86_64
+#         with:
+#           system-packages: 'libjerasure-dev'
+#           build-requirements: 'cython'
+
+#       - name: Upload Artifacts
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: dist
+#           path: dist/*-manylinux*.whl
