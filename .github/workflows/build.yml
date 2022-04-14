@@ -102,7 +102,7 @@ jobs:
         with:
           path: libs
           key: "libs-${{ matrix.config.arch }}-${{ env.CACHE_KEY }}"
-          
+
       - name: Cache Headers
         if: steps.cache-headers.outputs.cache-hit != 'true'
         run: |
@@ -114,6 +114,7 @@ jobs:
       - name: Build Dependencies
         if: steps.cache-libs.outputs.cache-hit != 'true'
         run: |
+          git clone --recurse-submodules ${{ env.REPO }}
           cd ${{ env.REPO_NAME }}
           mkdir build
           cd build
