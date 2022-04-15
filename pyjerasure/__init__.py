@@ -1,5 +1,4 @@
 """Init for Jerasure."""
-import sys
 from typing import Iterable
 
 from .jerasure import Matrix, decode, encode
@@ -70,7 +69,8 @@ def decode_from_blocks(
     """
     if len(blocks) < 1:
         raise ValueError("Length of blocks cannot be < 1")
-    max_size = len(sorted(blocks, key=lambda _block: len(_block), reverse=True)[0])
+
+    max_size = max([len(block) for block in blocks])
     size = align_size(matrix, max_size, packetsize)
     data = []
     for block in blocks:
@@ -106,7 +106,7 @@ def encode_from_blocks(
     """
     if len(blocks) < 1:
         raise ValueError("Length of blocks cannot be < 1")
-    max_size = len(sorted(blocks, key=lambda _block: len(_block), reverse=True)[0])
+    max_size = max([len(block) for block in blocks])
     size = align_size(matrix, max_size, packetsize)
     data = []
     for block in blocks:
