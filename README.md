@@ -17,6 +17,7 @@ data = [
 ```
 First we import the library and setup our matrix.
 
+There are multiple matrix types available which can be shown with `Matrix.TYPES`
 ```
 import pyjerasure
 
@@ -83,6 +84,57 @@ print(restored)
 #   b'\x1f\n\x1e\x00\x0b\x05\x07\x05\x00\x00\x00\x00\x00\x00\x00\x00',
 #   b'\x0c\r\xc2\x02fy}a\x00\x00\x00\x00\x00\x00\x00\x00']
 #
+```
+Blocks can be encoded and decoded as a byte string using the `*_from_bytes` methods.
+Each block needs to be padded in respect to the longest block. The `align_size` method returns the appropriate size for each block.
+
+```
+matrix_type = "cauchy"
+matrix = pyjerasure.Matrix(matrix_type, k, m, w)
+max_size = max([len(block) for block in data])
+size = pyjerasure.align_size(matrix, max_size)
+padded = [block.ljust(size, b"\x00") for block in data]
+padded_data = b"".join(padded)
+encoded = pyjerasure.encode_from_bytes(matrix, padded_data, size)
+print(encoded)
+
+#  Outputs:
+#
+#  b'hello\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+#    world\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+#    data-123\x00\x00\x00\x00\x00\x00\x00\x00
+#    data-456\x00\x00\x00\x00\x00\x00\x00\x00
+#    M\x8a\xea\x01+\x16x\xcb\x00\x00\x00\x00\x00\x00\x00\x00
+#    2\x89\xef\x01RQ\xe2\x8c\x00\x00\x00\x00\x00\x00\x00\x00'
+
+block_size = len(encoded) // (matrix.k + matrix.m)
+erased = bytearray(encoded)
+erased[:block_size * 2] = bytes(block_size * 2)
+erased = bytes(erased)
+print(erased)
+
+#  Outputs:
+#
+#  b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+#    \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 
+#    data-123\x00\x00\x00\x00\x00\x00\x00\x00
+#    data-456\x00\x00\x00\x00\x00\x00\x00\x00
+#    M\x8a\xea\x01+\x16x\xcb\x00\x00\x00\x00\x00\x00\x00\x00
+#    2\x89\xef\x01RQ\xe2\x8c\x00\x00\x00\x00\x00\x00\x00\x00'
+
+erasures = [0, 1]
+restored = pyjerasure.decode_from_bytes(matrix, erased, erasures, size)
+print(restored)
+
+#  Outputs:
+#
+#  b'hello\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+#    world\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+#    data-123\x00\x00\x00\x00\x00\x00\x00\x00
+#    data-456\x00\x00\x00\x00\x00\x00\x00\x00
+#    M\x8a\xea\x01+\x16x\xcb\x00\x00\x00\x00\x00\x00\x00\x00
+#    2\x89\xef\x01RQ\xe2\x8c\x00\x00\x00\x00\x00\x00\x00\x00'
+
 ```
 
 # Installing
