@@ -8,68 +8,7 @@ from cpython cimport array
 from libc.stdlib cimport calloc, free
 
 from pyjerasure cimport jerasure
-
-
-cdef class Matrix():
-    """Matrix Class.
-
-    :param type: Matrix type
-    :param k: Number of data blocks
-    :param m: Number of coding blocks
-    :param w: Word Size
-    """
-    TYPES = ["cauchy", "cauchy_good", "rs_vandermonde", "rs_r6", "liberation", "blaum_roth"]
-
-    def __cinit__(self, str type, int k = 0, int m = 0, int w = 0):
-        self.k = k
-        self.m = m
-        self.w = w
-        self.is_bitmatrix = False
-        self.type = type
-
-        if type == "cauchy":
-            self.ptr = jerasure.cauchy_original_coding_matrix(k, m, w)
-        elif type == "cauchy_good":
-            self.ptr = jerasure.cauchy_good_general_coding_matrix(k, m, w)
-        elif type == "rs_vandermonde":
-            self.ptr = jerasure.reed_sol_vandermonde_coding_matrix(k, m, w)
-            self.row_k_ones = 1
-        elif type == "rs_r6":
-            self.ptr = jerasure.reed_sol_r6_coding_matrix(k, w)
-            self.m = 2
-        elif type == "liberation":
-            self.ptr = jerasure.liberation_coding_bitmatrix(k, w)
-            self.m = 2
-            self.is_bitmatrix = True
-        elif type == "blaum_roth":
-            self.ptr = jerasure.blaum_roth_coding_bitmatrix(k, w)
-            self.m = 2
-            self.is_bitmatrix = True
-        else:
-            raise ValueError(f"type must be one of {self.TYPES}")
-
-    def __dealloc__(self):
-        if self.ptr != NULL:
-            free(self.ptr)
-            self.ptr = NULL
-
-    def __repr__(self):
-        return f"{str(self.__class__)[:-1]} type={self.type} valid={self.valid}>"
-
-    def print(self):
-        """Print matrix."""
-        if not self.valid:
-            print(None)
-            return
-        if self.is_bitmatrix:
-            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
-        else:
-            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.w)
-
-    @property
-    def valid(self) -> bool:
-        """Return True if matrix is valid."""
-        return self.ptr != NULL
+from pyjerasure.utils import align_size
 
 
 def __check_size(Matrix matrix, int size, int data_size, int packetsize = 0):
@@ -191,3 +130,108 @@ def encode(Matrix matrix, bytes data, int size, int packetsize = 0):
     if result < 0:
         return b""
     return data_array.tobytes()
+
+
+cdef class Matrix():
+    """Matrix Class.
+
+    :param type: Matrix type
+    :param k: Number of data blocks
+    :param m: Number of coding blocks
+    :param w: Word Size
+    """
+    TYPES = ("cauchy", "cauchy_good", "rs_vandermonde", "rs_r6", "liberation", "blaum_roth")
+
+    def __dealloc__(self):
+        if self.ptr != NULL:
+            free(self.ptr)
+            self.ptr = NULL
+
+    def __repr__(self):
+        return f"{str(self.__class__)[:-1]} type={self.type} k={self.k} m={self.m} w={self.w} valid={self.valid}>"
+
+    def __cinit__(self, str type, int k = 0, int m = 0, int w = 0):
+        self._k = k
+        self._m = m
+        self._w = w
+        self.is_bitmatrix = False
+        self.type = type
+
+        self.__init_matrix()
+
+    def __init_matrix(self):
+        if self.ptr != NULL:
+            free(self.ptr)
+
+        if self.type == "cauchy":
+            self.ptr = jerasure.cauchy_original_coding_matrix(self.k, self.m, self.w)
+        elif self.type == "cauchy_good":
+            self.ptr = jerasure.cauchy_good_general_coding_matrix(self.k, self.m, self.w)
+        elif self.type == "rs_vandermonde":
+            self.ptr = jerasure.reed_sol_vandermonde_coding_matrix(self.k, self.m, self.w)
+            self.row_k_ones = 1
+        elif self.type == "rs_r6":
+            self.ptr = jerasure.reed_sol_r6_coding_matrix(self.k, self.w)
+            self._m = 2
+        elif self.type == "liberation":
+            self.ptr = jerasure.liberation_coding_bitmatrix(self.k, self.w)
+            self._m = 2
+            self.is_bitmatrix = True
+        elif self.type == "blaum_roth":
+            self.ptr = jerasure.blaum_roth_coding_bitmatrix(self.k, self.w)
+            self._m = 2
+            self.is_bitmatrix = True
+        else:
+            raise ValueError(f"type must be one of {self.TYPES}")
+
+    def align_size(self, int size, int packetsize = 0) -> int:
+        """Return align size."""
+        return align_size(self, size, packetsize)
+
+    def print(self):
+        """Print matrix."""
+        if not self.valid:
+            print(None)
+            return
+        if self.is_bitmatrix:
+            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
+        else:
+            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.w)
+
+    @property
+    def valid(self) -> bool:
+        """Return True if matrix is valid."""
+        return self.ptr != NULL
+
+    @property
+    def k(self) -> int:
+        """Return number of data blocks."""
+        return self._k
+
+    @k.setter
+    def k(self, int blocks):
+        """Set number of data blocks."""
+        self._k = blocks
+        self.__init_matrix()
+
+    @property
+    def m(self) -> int:
+        """Return number of coding blocks."""
+        return self._m
+
+    @m.setter
+    def m(self, int blocks):
+        """Set number of coding blocks."""
+        self._m = blocks
+        self.__init_matrix()
+
+    @property
+    def w(self) -> int:
+        """Return word size."""
+        return self._w
+
+    @w.setter
+    def w(self, int size):
+        """Set word size."""
+        self._w = size
+        self.__init_matrix()

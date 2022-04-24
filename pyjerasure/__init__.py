@@ -1,18 +1,7 @@
 """Init for Jerasure."""
 from typing import Iterable
 
-from .jerasure import Matrix, decode, encode
-
-
-def align_size(matrix: Matrix, size: int, packetsize: int = 0) -> int:
-    """Return Aligned Size."""
-    if matrix.is_bitmatrix:
-        if packetsize <= 0:
-            raise ValueError("Packet size must be > 0")
-        width = matrix.w * packetsize
-    else:
-        width = 16
-    return ((size + width - 1) // width) * width
+from .jerasure import Matrix, decode, encode, align_size
 
 
 def decode_from_bytes(

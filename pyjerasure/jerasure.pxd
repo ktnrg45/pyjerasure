@@ -86,8 +86,8 @@ cdef extern from "reed_sol.h" nogil:
 cdef class Matrix:
     cdef int *ptr
     cdef readonly str type
-    cdef readonly int k
-    cdef readonly int m
-    cdef readonly int w
+    cdef readonly int _k
+    cdef readonly int _m
+    cdef readonly int _w
     cdef readonly int row_k_ones
     cdef readonly bint is_bitmatrix

@@ -2,9 +2,8 @@
 
 from pyjerasure import (
     Matrix,
-    decode,
-    encode,
-    align_size,
+    decode_from_bytes,
+    encode_from_bytes,
     decode_from_blocks,
     encode_from_blocks,
 )
@@ -85,7 +84,7 @@ def _test_decode(case):
     matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
 
-    size = align_size(matrix, case["size"], packetsize)
+    size = matrix.align_size(case["size"], packetsize)
     for index, item in enumerate(case["data"]):
         block = item.ljust(size, b"\x00")
         if index < case["k"]:
@@ -97,7 +96,9 @@ def _test_decode(case):
     data = b"".join(erased)
     original = b"".join(original)
     assert data != original
-    result = decode(matrix, data, erasures, size, packetsize=packetsize, data_only=True)
+    result = decode_from_bytes(
+        matrix, data, erasures, size, packetsize=packetsize, data_only=True
+    )
     assert original == result
 
     result_blocks = decode_from_blocks(
@@ -111,7 +112,7 @@ def _test_encode(case):
     data = []
     matrix = Matrix(case["type"], case["k"], case["m"], case["w"])
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
-    size = align_size(matrix, case["size"], packetsize)
+    size = matrix.align_size(case["size"], packetsize)
     for index, item in enumerate(case["data"]):
         block = item.ljust(size, b"\x00")
         encoded.append(block)
@@ -120,7 +121,7 @@ def _test_encode(case):
     encoded = b"".join(encoded)
     data = b"".join(data)
     assert data != encoded
-    result = encode(matrix, data, size, packetsize=packetsize)
+    result = encode_from_bytes(matrix, data, size, packetsize=packetsize)
     assert encoded == result
 
     result_blocks = encode_from_blocks(matrix, case["data"], packetsize)
