@@ -3,7 +3,7 @@
 """Implementation for pyjerasure."""
 
 import array
-from typing import Iterable
+from typing import Iterable, Union
 from cpython cimport array
 from libc.stdlib cimport calloc, free
 
@@ -150,6 +150,16 @@ cdef class Matrix():
     def __repr__(self):
         return f"{str(self.__class__)[:-1]} type={self.type} k={self.k} m={self.m} w={self.w} valid={self.valid}>"
 
+    def print(self):
+        """Print matrix."""
+        if not self.valid:
+            print(None)
+            return
+        if self.is_bitmatrix:
+            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
+        else:
+            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.w)
+
     def __cinit__(self, str type, int k = 0, int m = 0, int w = 0):
         self._k = k
         self._m = m
@@ -188,15 +198,10 @@ cdef class Matrix():
         """Return align size."""
         return align_size(self, size, packetsize)
 
-    def print(self):
-        """Print matrix."""
-        if not self.valid:
-            print(None)
-            return
-        if self.is_bitmatrix:
-            jerasure.jerasure_print_bitmatrix(self.ptr, self.m * self.w, self.k * self.w, self.w)
-        else:
-            jerasure.jerasure_print_matrix(self.ptr, self.m, self.k, self.w)
+    def align_block(self, block: Union[bytes, bytearray], int size, int packetsize = 0) -> bytes:
+        """Return aligned block."""
+        align_size = self.align_size(size, packetsize)
+        return bytes(block.ljust(align_size, b"\x00"))
 
     @property
     def valid(self) -> bool:

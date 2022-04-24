@@ -86,7 +86,7 @@ def _test_decode(case):
 
     size = matrix.align_size(case["size"], packetsize)
     for index, item in enumerate(case["data"]):
-        block = item.ljust(size, b"\x00")
+        block = matrix.align_block(item, case["size"], packetsize)
         if index < case["k"]:
             original.append(block)
         if index in erasures:
@@ -114,7 +114,7 @@ def _test_encode(case):
     packetsize = 0 if not case.get("packetsize") else case.get("packetsize")
     size = matrix.align_size(case["size"], packetsize)
     for index, item in enumerate(case["data"]):
-        block = item.ljust(size, b"\x00")
+        block = matrix.align_block(item, case["size"], packetsize)
         encoded.append(block)
         if index < case["k"]:
             data.append(block)
