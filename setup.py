@@ -33,11 +33,14 @@ def get_include_path():
         return default
     lines = output.decode().splitlines()
     for line in lines:
-        path = Path(line.lstrip())
-        if path.is_dir():
-            include_path = path / "jerasure"
-            if include_path.is_dir():
-                return str(include_path)
+        try:
+            path = Path(line.lstrip())
+            if path.is_dir():
+                include_path = path / "jerasure"
+                if include_path.is_dir():
+                    return str(include_path)
+        except Exception:  # pylint: disable=broad-except
+            continue
     return default
 
 
