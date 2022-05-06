@@ -200,10 +200,10 @@ jobs:
           - os: windows-latest
             arch: x86
             win-arch: win32
-#           - os: macos-latest
-#             arch: arm64
-#           - os: macos-latest
-#             arch: x86_64
+          - os: macos-latest
+            arch: arm64
+          - os: macos-latest
+            arch: x86_64
 
     env:
       CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
@@ -214,6 +214,7 @@ jobs:
       CIBW_MANYLINUX_S390X_IMAGE: manylinux_2_24
       CIBW_ARCHS: ${{ matrix.arch }}
       CIBW_BEFORE_ALL_LINUX: script/cibuild.sh
+      CIBW_BEFORE_ALL_MACOS: script/cibuild.sh
       CIBW_BEFORE_BUILD: pip install cython
       CIBW_ENVIRONMENT_WINDOWS: PYJERASURE_INCLUDE=D:\\a\\pyjerasure\\pyjerasure\\Include PYJERASURE_LIB=D:\\a\\pyjerasure\\pyjerasure\\libs
       CIBW_SKIP: pp* *-musllinux_i686*
@@ -222,6 +223,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Set up QEMU
         if: matrix.os == 'ubuntu-latest'

@@ -1,0 +1,3 @@
+[submodule "jerasure"]
+	path = jerasure
+	url = https://github.com/ktnrg45/jerasure
