@@ -200,10 +200,10 @@ jobs:
           # - os: windows-latest
           #   arch: x86
           #   win-arch: win32
-          # - os: macos-latest
-          #   arch: arm64
           - os: macos-latest
-            arch: x86_64
+            arch: arm64
+          # - os: macos-latest
+          #   arch: x86_64
 
     env:
       CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
@@ -223,6 +223,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Set up QEMU
         if: matrix.os == 'ubuntu-latest'
