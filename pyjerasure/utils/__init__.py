@@ -1,12 +1,11 @@
 """Utils."""
-from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyjerasure import Matrix
 
 
-def align_size(matrix: Matrix, size: int, packetsize: int = 0) -> int:
+def align_size(matrix: "Matrix", size: int, packetsize: int = 0) -> int:
     """Return Aligned Size."""
     if matrix.is_bitmatrix:
         if packetsize <= 0:
